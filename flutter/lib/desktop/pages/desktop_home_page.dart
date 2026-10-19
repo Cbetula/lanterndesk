@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/common/widgets/animated_rotation_widget.dart';
-import 'package:flutter_hbb/common/widgets/custom_password.dart';
+import 'package:flutter_hbb/common/lantern_password.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/connection_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
@@ -49,6 +49,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   var watchIsCanRecordAudio = false;
   Timer? _updateTimer;
   bool isCardClosed = false;
+  String _networkInfo = '{}';
 
   final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
@@ -91,6 +92,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       ),
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
+      if (!isOutgoingOnly) buildIPBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
       FutureBuilder<Widget>(
         future: Future.value(
@@ -248,6 +250,60 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildIPBoard(BuildContext context) {
+    final info = jsonDecode(_networkInfo) as Map<String, dynamic>;
+    final ips = (info['ips'] as List<dynamic>?) ?? [];
+    if (!info.containsKey('ips')) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 8, 11, 12),
+      padding: const EdgeInsets.only(left: 7),
+      decoration: const BoxDecoration(
+          border: Border(left: BorderSide(color: MyTheme.accent, width: 2))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('IP',
+              style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.color
+                      ?.withOpacity(0.5))),
+          if (ips.isEmpty) Text(translate('No local IPv4 address')),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 110),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final ip in ips)
+                    Tooltip(
+                      message: translate('Copy'),
+                      child: InkWell(
+                        onTap: () {
+                          Clipboard.setData(
+                              ClipboardData(text: '$ip:${info['port']}'));
+                          showToast(translate('Copied'));
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Text('$ip:${info['port']}',
+                              style: const TextStyle(fontSize: 14)),
+                        ),
+                      ),
+                    )
+                ],
+              ),
+            ),
+          ),
+          if (info['direct_enabled'] == false)
+            Text(translate('Enable direct IP access in Settings > Security.')),
         ],
       ),
     );
@@ -701,6 +757,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     super.initState();
     _updateTimer = periodic_immediate(const Duration(seconds: 1), () async {
       await gFFI.serverModel.fetchID();
+      final networkInfo = await bind.mainGetCommon(key: 'lantern-network-info');
+      if (!mounted) return;
+      if (_networkInfo != networkInfo) {
+        setState(() => _networkInfo = networkInfo);
+      }
       final error = await bind.mainGetError();
       if (systemError != error) {
         systemError = error;
@@ -898,15 +959,6 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
       (await bind.mainGetCommon(key: "permanent-password-set")) == "true";
   final presetPassword = permanentPasswordSet && !localPasswordSet;
   var canSubmit = false;
-  final RxString rxPass = "".obs;
-  final rules = [
-    DigitValidationRule(),
-    UppercaseValidationRule(),
-    LowercaseValidationRule(),
-    // SpecialCharacterValidationRule(),
-    MinCharactersValidationRule(8),
-  ];
-  final maxLength = bind.mainMaxEncryptLen();
   final statusTip = localPasswordSet
       ? translate('password-hidden-tip')
       : (presetPassword ? translate('preset-password-in-use-tip') : '');
@@ -915,7 +967,7 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
 
   gFFI.dialogManager.show((setState, close, context) {
     updateCanSubmit() {
-      canSubmit = p0.text.trim().isNotEmpty || p1.text.trim().isNotEmpty;
+      canSubmit = p0.text.isNotEmpty;
     }
 
     submit() async {
@@ -926,21 +978,11 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
         errMsg0 = "";
         errMsg1 = "";
       });
-      final pass = p0.text.trim();
-      if (pass.isNotEmpty) {
-        final Iterable violations = rules.where((r) => !r.validate(pass));
-        if (violations.isNotEmpty) {
-          setState(() {
-            errMsg0 =
-                '${translate('Prompt')}: ${violations.map((r) => r.name).join(', ')}';
-          });
-          return;
-        }
-      }
-      if (p1.text.trim() != pass) {
+      final pass = p0.text;
+      final validationError = validatePermanentPassword(pass, p1.text);
+      if (validationError != null) {
         setState(() {
-          errMsg1 =
-              '${translate('Prompt')}: ${translate("The confirmation is not identical.")}';
+          errMsg1 = '${translate('Prompt')}: ${translate(validationError)}';
         });
         return;
       }
@@ -984,22 +1026,15 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
                     controller: p0,
                     autofocus: true,
                     onChanged: (value) {
-                      rxPass.value = value.trim();
                       setState(() {
                         errMsg0 = '';
                         updateCanSubmit();
                       });
                     },
-                    maxLength: maxLength,
                   ).workaroundFreezeLinuxMint(),
                 ),
               ],
             ),
-            Row(
-              children: [
-                Expanded(child: PasswordStrengthIndicator(password: rxPass)),
-              ],
-            ).marginOnly(top: 2, bottom: showStatusTipOnMobile ? 2 : 8),
             SizedBox(
               height: showStatusTipOnMobile ? 0.0 : 8.0,
             ),
@@ -1018,7 +1053,6 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
                         updateCanSubmit();
                       });
                     },
-                    maxLength: maxLength,
                   ).workaroundFreezeLinuxMint(),
                 ),
               ],
@@ -1038,24 +1072,6 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
             SizedBox(
               height: showStatusTipOnMobile ? 0.0 : 8.0,
             ),
-            Obx(() => Wrap(
-                  runSpacing: showStatusTipOnMobile ? 2.0 : 8.0,
-                  spacing: 4,
-                  children: rules.map((e) {
-                    var checked = e.validate(rxPass.value.trim());
-                    return Chip(
-                        label: Text(
-                          e.name,
-                          style: TextStyle(
-                              color: checked
-                                  ? const Color(0xFF0A9471)
-                                  : Color.fromARGB(255, 198, 86, 157)),
-                        ),
-                        backgroundColor: checked
-                            ? const Color(0xFFD0F7ED)
-                            : Color.fromARGB(255, 247, 205, 232));
-                  }).toList(),
-                ))
           ],
         ),
       ),

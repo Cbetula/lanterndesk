@@ -1924,6 +1924,8 @@ class RustdeskImpl {
   }
 
   Future<String> mainGetCommon({required String key, dynamic hint}) {
+    if (key == 'lantern-network-info') return Future.value('{}');
+    if (key == 'lantern-server-configured') return Future.value('true');
     throw UnimplementedError("mainGetCommon");
   }
 

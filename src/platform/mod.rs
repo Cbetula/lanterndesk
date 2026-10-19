@@ -1,3 +1,9 @@
+#[cfg(all(
+    feature = "flutter",
+    any(target_os = "linux", target_os = "macos", target_os = "windows")
+))]
+pub(crate) mod lantern_network;
+
 #[cfg(target_os = "linux")]
 pub use linux::*;
 #[cfg(target_os = "macos")]

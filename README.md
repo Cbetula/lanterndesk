@@ -2,15 +2,16 @@
 
 基于 RustDesk 的独立远程桌面项目。仅使用**自己的 ID／中继服务器或 IP 直连**，无需注册或登录账户。设备 ID 连接需要两端配置同一套自建服务器；IP 直连不需要服务器。访问密码／对端确认仍然保留。
 
-仅自建服务器／IP 直连版：[LanternDesk 0.1.2 下载与运行说明](https://github.com/Cbetula/lanterndesk/releases/tag/lanterndesk-v0.1.2)。Linux 编译包保存在独立的 `codex/private-network-artifacts` 分支，`main` 保存源码。
+仅自建服务器／IP 直连版：[Linux x86_64 下载](https://github.com/Cbetula/lanterndesk/raw/refs/heads/codex/private-network-artifacts/lanterndesk-v0.1.2-linux-x86_64.tar.gz) · [SHA-256](https://github.com/Cbetula/lanterndesk/raw/refs/heads/codex/private-network-artifacts/lanterndesk-v0.1.2-linux-x86_64.tar.gz.sha256)。Linux 编译包保存在独立的 `codex/private-network-artifacts` 分支，`main` 保存源码。
 
-Mac 安装包见同一发布页，按 Apple Silicon／Intel 芯片选择 DMG，需要 macOS 13 或更新版本。旧版 0.1.0／0.1.1 保留了公共服务器默认值，请使用 0.1.2 或从当前源码构建。
+当前修改只交付 Linux 编译包；Mac 由维护者在 Mac 本机构建、发布，见下方说明。旧版 0.1.0／0.1.1 保留了公共服务器默认值，请使用当前 Linux 包或从当前源码构建。
 
 - 原始基线：[`rustdesk/rustdesk@53996e3c`](https://github.com/rustdesk/rustdesk/commit/53996e3c404ea5083df0775057e4149e49102084)。保留原项目历史和许可证；`libs/hbb_common` 固定在原提交。
 - 名称和 Linux 配置独立：`LanternDesk`，配置位于 `~/.config/lanterndesk/`。账户入口默认关闭。
 - 未配置服务器时不注册、不查询公共设备 ID，也不回退到 RustDesk 公共服务器；默认开启 IP 直连监听（TCP 21118），可以在安全设置中关闭。使用设备 ID 时必须先配置自己的服务器。
+- 首页在 ID 下方显示本机 IPv4 地址与直连端口，点击地址即可复制；多网卡地址可在 IP 栏滚动查看。未配置自建服务器时，底部提示使用 IP 直连。固定密码只要求非空、两次输入一致，不限制长度、大小写、数字或符号，首尾空格原样保留。
 - 禁用依赖公共 STUN 的 IPv6 打洞和 WebRTC 路径；支持 IP 直连、自建服务器协商的 TCP／UDP 连接以及自建中继。直接输入可达的 IPv6 地址不受影响。
-- 已编译目标：**Ubuntu 24.04+ / Linux x86_64，以及 macOS 13+ / Apple Silicon、Intel 的 Flutter 桌面版**。使用软件视频编解码；其他平台仍保留上游源码，尚未编译验收。
+- 当前已编译目标：**Ubuntu 24.04+ / Linux x86_64 的 Flutter 桌面版**，使用软件视频编解码。macOS 13+ 保留本机构建脚本；旧版 Mac 构建记录不代表当前源码已在 Mac 验收。
 
 ## Linux 中转：克隆后一步配置
 

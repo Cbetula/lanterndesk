@@ -23,8 +23,17 @@
 - `cargo test --locked --release --lib --features flutter,linux-pkg-config,unix-file-copy-paste lantern::tests`：3 项通过，覆盖空配置无公共回退、拒绝公共服务器、自建地址的端口及优先级。
 - 使用隔离 Docker 网络、独立配置、Xvfb／DBus 和 `strace` 启动实际 Linux 包，分别检查空配置、带有旧公共地址及已启用公共 STUN 选项的配置、自建 hbbs/hbbr 配置。三个场景均监听 TCP 21118，直连均收到 45 字节的认证握手；跟踪期间没有公共服务的 DNS 查询或外部网络目标。
 - 自建 hbbs/hbbr 使用固定的 1.1.16 镜像，客户端成功注册公钥；服务器和客户端测试容器、网络均已清理。临时测试使用独立密钥，未改动用户的密码或服务器设置。
-- Linux 包 SHA-256：`d5ced67de05ecbe858ab4381c1f99993ac68de7cca71b62b0c529a09d7333c3e`。本机已退出旧程序并启动新程序，确认 TCP 21118 监听和 Flutter 初始化成功。
+- 首次移除公共服务默认值的 Linux 包 SHA-256：`d5ced67de05ecbe858ab4381c1f99993ac68de7cca71b62b0c529a09d7333c3e`；下方首页和密码更新后的包已替代此包。
 - 当前保留 IP 直连、自建 ID 协商和自建中继。IPv6 打洞与 WebRTC 因隐含公共 STUN 依赖而禁用；直接输入 IPv6 地址仍走原 IP 直连路径。真实跨设备桌面控制与系统权限仍需实机验收。
+
+## 首页 IP 与固定密码更新验证
+
+- `flutter test --no-pub test/lantern_password_test.dart`：2 项通过。
+- 修改涉及的 Dart 文件静态分析通过，无错误／警告，只有 9 项既有 API 弃用提示。Linux Rust release 与 Flutter release 重新编译通过。
+- 使用原生桥接直接检查：空配置与公共地址返回未配置、自建地址返回已配置；无需重启即可响应服务器、直连端口和开关变化；枚举返回本机非回环 IPv4。测试使用独立配置。
+- 更新后的实际桌面包在带旧公共地址配置、自建 hbbs/hbbr 两种隔离场景中均通过启动与 TCP 21118 认证握手检查（45 字节），自建场景注册成功。网络跟踪未发现公共服务查询或外部目标，应用日志无 Dart 异常；测试资源已清理。
+- 当前 Linux 压缩包 31,814,539 字节，SHA-256：`33c409333ee98ee43a723f41776eb3ea347aba5aadefedc25ca7ae3beeda1d01`，校验通过，`--version` 返回 `1.5.1`。本机已重启为此包，Flutter 初始化完成、TCP 21118 正常监听。
+- 未完成双机桌面控制实测；IP 栏目前展示 IPv4，IPv6 仍可手动输入连接。Mac 当前源码由维护者自行编译与发布。
 
 ## macOS 0.1.1 构建验证（旧版）
 
@@ -59,7 +68,22 @@
 | `flutter/macos/Runner/Info.plist` | 注册独立的 lanterndesk URL scheme，避免与官方应用冲突。 |
 | `flutter/macos/Podfile` | 原生插件最低系统与 Mac 应用保持一致。 |
 
-新逻辑集中在 `src/lantern.rs`、`scripts/`、`deploy/relay/`、`packaging/` 和独立的 macOS 构建工作流。0.1.2 的回归范围是服务器选择、空配置处理和传输开关；会话消息、密码校验、输入注入与屏幕捕获沿用原实现。共享文件只加入必要的选择调用和早期拒绝，不改动共享类型、函数签名或子模块。原版目录保持干净。
+新逻辑集中在 `src/lantern.rs`、`scripts/`、`deploy/relay/`、`packaging/` 和独立的 macOS 构建工作流。0.1.2 的回归范围是服务器选择、空配置处理、传输开关，以及下列首页和密码界面。会话消息、密码哈希与认证协议、输入注入和屏幕捕获沿用原实现。不改动共享类型、函数签名或子模块，原版目录保持干净。
+
+### 首页 IP 和固定密码改动
+
+| 现有文件／运行路径 | 必要改动 |
+| --- | --- |
+| `src/lantern.rs` | 新增只读网络信息，返回本机 IPv4、直连端口和开关。 |
+| `src/platform/mod.rs` | 声明独立的 `lantern_network` 模块；Unix 使用本机 `getifaddrs` 枚举，避免默认路由库探测公共 IP。Windows 使用已有的系统网卡 API 封装。 |
+| `src/flutter_ffi.rs` | 现有通用查询增加两个键，将网络信息及是否配置自建 ID 服务器传给界面；桥接接口不变。 |
+| `flutter/lib/desktop/pages/desktop_home_page.dart` | ID 下方新增可复制、可滚动的 IP 栏，复用原定时刷新；固定密码保存取消复杂度、长度和空格裁剪规则，保留非空、确认匹配、保存失败提示和显式移除。移动端复用的密码对话框同步生效。 |
+| `flutter/lib/desktop/pages/connection_page.dart` | 无自建 ID 服务器时显示 IP 直连提示，状态文字允许换行以免溢出；已有服务停止提示优先。 |
+| `flutter/lib/common/widgets/dialog.dart` | 远程认证输入保留原密码首尾空格，确保新允许的密码可用于连接。操作系统登录输入沿用原处理。 |
+| `flutter/lib/web/bridge.dart` | 新查询在不支持本机网卡的 Web 端返回兼容值，保持原显示路径。 |
+| `src/lang/*.rs` | 仅追加四个新提示，简体中文提供译文，其余留空。 |
+
+新增密码校验集中在 `flutter/lib/common/lantern_password.dart`，`flutter/test/lantern_password_test.dart` 两项测试覆盖短密码、纯数字、Unicode、空格及长密码可保存，空密码与确认不一致被拒绝。此轮没有编译 Mac 版，相关工作流已取消，后续由维护者在 Mac 编译并发布。
 
 ## 当前范围
 

@@ -61,6 +61,44 @@ pub(crate) fn rendezvous_servers() -> Vec<String> {
     }
 }
 
+#[cfg(feature = "flutter")]
+pub(crate) fn server_configured() -> bool {
+    !configured_server(
+        &EXE_RENDEZVOUS_SERVER.read().unwrap(),
+        &crate::ui_interface::get_option(keys::OPTION_CUSTOM_RENDEZVOUS_SERVER),
+        &PROD_RENDEZVOUS_SERVER.read().unwrap(),
+    )
+    .is_empty()
+}
+
+#[cfg(feature = "flutter")]
+pub(crate) fn network_info() -> String {
+    use crate::ui_interface::get_option;
+    use hbb_common::config::option2bool;
+
+    let mut ips = Vec::<String>::new();
+    #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+    for ip in crate::platform::lantern_network::local_ipv4() {
+        if !ip.is_loopback() && !ip.is_unspecified() && !ip.is_link_local() {
+            let address = ip.to_string();
+            if !ips.contains(&address) {
+                ips.push(address);
+            }
+        }
+    }
+    let port = get_option(keys::OPTION_DIRECT_ACCESS_PORT)
+        .parse::<i32>()
+        .ok()
+        .filter(|port| *port > 0)
+        .unwrap_or(RENDEZVOUS_PORT + 2);
+    serde_json::json!({
+        "ips": ips,
+        "port": port,
+        "direct_enabled": option2bool(keys::OPTION_DIRECT_SERVER, &get_option(keys::OPTION_DIRECT_SERVER)),
+    })
+    .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::configured_server;

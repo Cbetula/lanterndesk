@@ -998,7 +998,7 @@ _connectDialog(
       }
       final osUsername = osUsernameController?.text.trim() ?? '';
       final osPassword = osPasswordController?.text.trim() ?? '';
-      final password = passwordController?.text.trim() ?? '';
+      final password = passwordController?.text ?? '';
       if (passwordController != null && password.isEmpty) return;
       gFFI.login(
         osUsername,

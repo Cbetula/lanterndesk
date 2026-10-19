@@ -35,6 +35,7 @@ class OnlineStatusWidget extends StatefulWidget {
 class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
   final _svcStopped = Get.find<RxBool>(tag: 'stop-service');
   final _svcIsUsingPublicServer = true.obs;
+  final _serverConfigured = true.obs;
   Timer? _updateTimer;
 
   double get em => 14.0;
@@ -117,7 +118,8 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               width: 8,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(4),
-                color: _svcStopped.value ||
+                color: !_serverConfigured.value ||
+                        _svcStopped.value ||
                         stateGlobal.svcStatus.value == SvcStatus.connecting
                     ? kColorWarn
                     : (stateGlobal.svcStatus.value == SvcStatus.ready
@@ -125,10 +127,11 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                         : Color.fromARGB(255, 224, 79, 95)),
               ),
             ).marginSymmetric(horizontal: em),
-            Container(
+            Flexible(
+                child: Container(
               width: isIncomingOnly ? 226 : null,
               child: _buildConnStatusMsg(),
-            ),
+            )),
             // stop
             if (!isIncomingOnly) startServiceWidget(),
             // ready && public
@@ -158,16 +161,20 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
     return Text(
       _svcStopped.value
           ? translate("Service is not running")
-          : stateGlobal.svcStatus.value == SvcStatus.connecting
-              ? translate("connecting_status")
-              : stateGlobal.svcStatus.value == SvcStatus.notReady
-                  ? translate("not_ready_status")
-                  : translate('Ready'),
+          : !_serverConfigured.value
+              ? translate('No server configured. Use IP to connect.')
+              : stateGlobal.svcStatus.value == SvcStatus.connecting
+                  ? translate("connecting_status")
+                  : stateGlobal.svcStatus.value == SvcStatus.notReady
+                      ? translate("not_ready_status")
+                      : translate('Ready'),
       style: TextStyle(fontSize: em),
     );
   }
 
   updateStatus() async {
+    _serverConfigured.value =
+        await bind.mainGetCommon(key: 'lantern-server-configured') == 'true';
     final status =
         jsonDecode(await bind.mainGetConnectStatus()) as Map<String, dynamic>;
     final statusNum = status['status_num'] as int;

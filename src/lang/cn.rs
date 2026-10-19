@@ -814,5 +814,9 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("On", "开"),
         ("Off", "关"),
         ("Configure your own ID server in Settings > Network, or connect directly by IP.", "请在“设置 > 网络”中配置自己的 ID 服务器，或直接输入 IP 地址连接。"),
+        ("No server configured. Use IP to connect.", "未配置自建服务器，请使用 IP 直连。"),
+        ("No local IPv4 address", "暂无本机 IPv4 地址"),
+        ("Enable direct IP access in Settings > Security.", "请在“设置 > 安全”中启用 IP 直接访问。"),
+        ("Password cannot be empty", "密码不能为空"),
     ].iter().cloned().collect();
 }

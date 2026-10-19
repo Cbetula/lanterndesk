@@ -814,5 +814,9 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("On", "ON"),
         ("Off", "OFF"),
         ("Configure your own ID server in Settings > Network, or connect directly by IP.", ""),
+        ("No server configured. Use IP to connect.", ""),
+        ("No local IPv4 address", ""),
+        ("Enable direct IP access in Settings > Security.", ""),
+        ("Password cannot be empty", ""),
     ].iter().cloned().collect();
 }
