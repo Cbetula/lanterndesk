@@ -29,7 +29,10 @@ jobs:
           submodules: recursive
           persist-credentials: false
       - name: Install build prerequisites
-        run: brew install cmake pkg-config cocoapods autoconf automake libtool
+        run: |
+          brew install cmake pkg-config autoconf automake libtool
+          if ! command -v pod >/dev/null; then brew install cocoapods; fi
+          pod --version
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |

@@ -58,14 +58,14 @@ perl -pi -e 's/^([ \t]*)_setFramesEnabledState\(false\);/$1\/\/_setFramesEnabled
 flutter config --no-analytics --enable-macos-desktop
 rustup toolchain install 1.81.0 --profile minimal
 
-if [[ $arch == x86_64 ]]; then
-  if [[ ! -x $cache_dir/nasm-2.16.03/nasm ]]; then
-    curl -fL --retry 3 https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip -o "$cache_dir/downloads/nasm.zip"
-    printf '%s  %s\n' 0d29bcd8a5fc617333f4549c7c1f93d1866a4a0915c40359e0a8585bb1a5aa75 "$cache_dir/downloads/nasm.zip" | shasum -a 256 -c -
-    unzip -q "$cache_dir/downloads/nasm.zip" -d "$cache_dir"
-  fi
-  export PATH="$cache_dir/nasm-2.16.03:$PATH"
+# The upstream AOM port requires NASM even on arm64; build it natively to avoid Rosetta.
+if [[ ! -x $cache_dir/nasm-2.16.03/nasm ]]; then
+  curl -fL --retry 3 https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/nasm-2.16.03.tar.xz -o "$cache_dir/downloads/nasm.tar.xz"
+  printf '%s  %s\n' 1412a1c760bbd05db026b6c0d1657affd6631cd0a63cddb6f73cc6d4aa616148 "$cache_dir/downloads/nasm.tar.xz" | shasum -a 256 -c -
+  tar -xJf "$cache_dir/downloads/nasm.tar.xz" -C "$cache_dir"
+  (cd "$cache_dir/nasm-2.16.03" && ./configure && make -j "$CARGO_BUILD_JOBS")
 fi
+export PATH="$cache_dir/nasm-2.16.03:$PATH"
 
 export VCPKG_ROOT="$cache_dir/vcpkg"
 vcpkg_commit=9e593bb18ea69cc5095e012465dcd675a822ed0d

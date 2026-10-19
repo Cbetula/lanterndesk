@@ -14,7 +14,9 @@ xcodebuild -version
 安装 [Homebrew](https://brew.sh/) 和 [rustup](https://rustup.rs/)，然后安装构建依赖：
 
 ```bash
-brew install cmake pkg-config cocoapods autoconf automake libtool
+brew install cmake pkg-config autoconf automake libtool
+if ! command -v pod >/dev/null; then brew install cocoapods; fi
+pod --version
 ```
 
 ## 克隆并编译
@@ -27,7 +29,7 @@ cd lanterndesk
 ./scripts/build-macos.sh
 ```
 
-脚本安装用户范围的 Rust 1.81.0 工具链；下载固定且校验 SHA-256 的 Flutter 3.24.5，及 Intel 构建需要的 NASM 2.16.03。vcpkg 固定为上游提交 `9e593bb18ea69cc5095e012465dcd675a822ed0d`，使用原项目 codec overlay。下载源和代理可通过 `FLUTTER_STORAGE_BASE_URL`、`HTTPS_PROXY` 等环境变量设置，校验和仍然强制检查。
+脚本安装用户范围的 Rust 1.81.0 工具链；下载固定且校验 SHA-256 的 Flutter 3.24.5，并从校验过的 NASM 2.16.03 源码编译本机工具（不依赖 Rosetta）。vcpkg 固定为上游提交 `9e593bb18ea69cc5095e012465dcd675a822ed0d`，使用原项目 codec overlay。下载源和代理可通过 `FLUTTER_STORAGE_BASE_URL`、`HTTPS_PROXY` 等环境变量设置，校验和仍然强制检查。
 
 工具链、依赖与工作副本保存在 `~/Library/Caches/lanterndesk-macos`，可用 `LANTERNDESK_MACOS_CACHE` 指定其他路径。不要同时使用同一个缓存目录运行多个构建。默认 3 个 Rust / vcpkg 编译任务，可通过 `CARGO_BUILD_JOBS` 调整。
 
