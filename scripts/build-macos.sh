@@ -108,7 +108,8 @@ done
 bash .github/scripts/sign-macos-app.sh "$app" - flutter/macos/Runner/Release.entitlements
 [[ $(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Contents/Info.plist") == io.github.cbetula.lanterndesk ]]
 [[ $("$app/Contents/MacOS/LanternDesk" --version) == 1.5.1 ]]
-lipo -verify_arch "$arch" "$app/Contents/MacOS/LanternDesk" "$app/Contents/MacOS/service"
+lipo "$app/Contents/MacOS/LanternDesk" -verify_arch "$arch"
+lipo "$app/Contents/MacOS/service" -verify_arch "$arch"
 
 mkdir -p "$repo_dir/dist"
 stage_dir=$(mktemp -d "$cache_dir/dmg-$arch.XXXXXX")
