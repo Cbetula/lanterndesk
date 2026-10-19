@@ -35,6 +35,10 @@ git submodule update --init --recursive
 
 此仓库保存了与基线一致、经过 SHA-256 校验的上游桥接文件归档，**不运行桥接代码生成器**。升级 RustDesk 基线或修改 FFI 时，需同步审查桥接文件。
 
+## Mac 本机构建
+
+在装好完整 Xcode、rustup 和构建依赖的 Mac 上运行 `./scripts/build-macos.sh`，会按本机芯片生成 Apple Silicon 或 Intel 的 DMG。最低目标为 macOS 13，采用临时签名，尚未经过 Apple 公证。Linux 主机不能直接运行这套 Xcode 构建。[准备步骤、签名说明与回归范围](packaging/macos/README.md)。
+
 ## 与上游的边界
 
 应用名和账户开关在独立模块 `src/lantern.rs` 初始化，原有会话协议和中转实现保持原样。Linux 可执行文件、GTK 应用 ID 和 DBus 名称使用独立身份，避免与原版同时运行时冲突。上游自动定时工作流在此独立仓库中关闭；仍保留原工作流供维护时参考。

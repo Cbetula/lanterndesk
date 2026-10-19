@@ -1,0 +1,77 @@
+name: LanternDesk macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'New release tag (leave empty to only build artifacts)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            arch: arm64
+          - os: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Install build prerequisites
+        run: brew install cmake pkg-config cocoapods autoconf automake libtool
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/Library/Caches/lanterndesk-macos/vcpkg
+            ~/Library/Caches/lanterndesk-macos/sdk-${{ matrix.arch }}
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.pub-cache
+          key: macos-${{ matrix.arch }}-v1-${{ hashFiles('Cargo.lock', 'packaging/linux/pubspec.lock', 'res/vcpkg/**') }}
+      - name: Build and verify DMG
+        run: bash scripts/build-macos.sh
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lanterndesk-macos-${{ matrix.arch }}
+          path: |
+            dist/lanterndesk-macos-${{ matrix.arch }}.dmg
+            dist/lanterndesk-macos-${{ matrix.arch }}.dmg.sha256
+          if-no-files-found: error
+          compression-level: 0
+
+  release:
+    if: inputs.release_tag != ''
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: lanterndesk-macos-*
+          path: dist
+          merge-multiple: true
+      - name: Publish verified packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          [[ "$RELEASE_TAG" =~ ^lanterndesk-v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid release tag'; exit 1; }
+          (cd dist && sha256sum -c ./*.sha256)
+          gh release create "$RELEASE_TAG" dist/*.dmg dist/*.sha256 \
+            --target "$GITHUB_SHA" --title "LanternDesk macOS — $RELEASE_TAG" \
+            --notes-file packaging/macos/RELEASE_ZH.md
