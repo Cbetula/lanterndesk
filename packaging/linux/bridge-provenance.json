@@ -1,0 +1,10 @@
+{
+  "upstream_repository": "https://github.com/rustdesk/rustdesk",
+  "upstream_commit": "53996e3c404ea5083df0775057e4149e49102084",
+  "workflow_run": "https://github.com/rustdesk/rustdesk/actions/runs/39180666729",
+  "artifact_id": 12156082959,
+  "artifact_name": "bridge-artifact",
+  "artifact_api": "https://api.github.com/repos/rustdesk/rustdesk/actions/artifacts/12156082959",
+  "sha256": "fc50782895f49a1d25bf9439bbc59af116d9ba44f916fcf1d485e8a4873190a2",
+  "note": "Unmodified upstream generated bridge files, verified against the GitHub artifact API digest. Vendored so builds survive upstream artifact expiration; no local code generation is required."
+}

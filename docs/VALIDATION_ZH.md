@@ -1,0 +1,41 @@
+# LanternDesk 交付与回归范围
+
+基线：RustDesk `53996e3c404ea5083df0775057e4149e49102084`；子模块 `libs/hbb_common` 保持 `5d52530b636fb296a324260b074780cf559e0093`，没有引入额外上游提交。验证日期：2026-10-19。
+
+## 已验证
+
+- `bash deploy/relay/test-setup.sh`：通过。覆盖命令帮助、无副作用配置预览及无效参数拒绝。
+- 中转配置通过 Docker Compose 1.29.2 校验；真实启动 `rustdesk/rustdesk-server:1.1.16` 的 `hbbs` / `hbbr`。测试只映射随机本机回环端口。
+- `hbbs` 的两个 TCP 入口正确返回 NAT 检测协议响应。
+- `hbbr` 拒绝错误密钥；两个使用正确公钥和相同会话 UUID 的连接成功配对，并逐字节转发测试消息。
+- 重复启动容器后服务器公钥校验和不变；客户端 JSON / 导入字符串转换往返一致。
+- 测试容器、网络和临时密钥已清理；未修改宿主机的防火墙或服务。
+- 官方桥接归档的 SHA-256 与 GitHub 产物元数据一致，Rust / Flutter SDK 下载校验通过；没有运行桥接生成器。
+
+- Rust release 库与 Flutter Linux release 桌面程序编译成功。`flutter pub get --enforce-lockfile` 使用打包目录的专用锁文件通过，原 `Cargo.lock` 与 `flutter/pubspec.lock` 保持逐字节不变。
+- 压缩包大小 32,002,062 字节；SHA-256 为 `440e7714b7779f76bfffa97ecf3a9a2eacdaa9521834fed2c1464d520b8702e3`。随包校验文件验证通过，压缩包没有符号链接，程序和 Rust 库的动态依赖均能解析。
+- 打包程序 `--version` 返回 `1.5.1`，退出码为 0；这是保留的上游内部版本，本项目首发标签为 `lanterndesk-v0.1.0`。
+- 使用独立 XDG 目录、Xvfb 和 DBus 会话启动，Flutter 日志到达 `_globalFFI init end` 和主窗口激活事件，程序持续运行 50 秒后由测试超时正常终止，未发生程序崩溃、缺失动态库或 Dart 异常。虚拟显示环境出现 portal、keyring 和 DRI 警告；实际桌面的屏幕共享权限仍需实机验证。
+- 隔离启动生成 LanternDesk 自己的配置与 IPC 路径，没有使用原版 RustDesk 设置。
+
+## 现有文件与运行路径的改动
+
+| 现有文件 | 改动范围及必要原因 |
+| --- | --- |
+| `src/lib.rs` | 声明新的 `lantern` 模块，使品牌默认值集中在独立文件。 |
+| `src/common.rs` | 在现有自定义客户端初始化入口加入一行调用，设置应用名并关闭现成的账户入口。该入口覆盖桌面、服务及 Flutter 初始化。 |
+| `src/server/dbus.rs` | 使用独立的 Linux DBus 名称，防止与原版同时运行时连接请求发到另一款程序；同步修正文档示例命令。 |
+| `flutter/linux/CMakeLists.txt` | 修改 Linux 可执行文件名与 GTK 应用 ID，让系统识别 LanternDesk。内部桥接库名称不变。 |
+| `.gitignore` | 排除编译产物 `dist/`，避免二进制包进入源码提交。 |
+| `README.md` | 在原文前添加本项目定位、构建和中转指令，并保留上游说明与归属。 |
+| `.github/workflows/flutter-nightly.yml` | 移除自动定时触发，避免新私有仓库自动运行上游全平台发布任务；保留手动入口。 |
+| `.github/workflows/update-webpki-roots.yml` | 移除自动定时触发，避免未经配置的副本定期创建更新分支；保留手动入口。 |
+
+新逻辑集中在 `src/lantern.rs`、`scripts/`、`deploy/relay/` 和 `packaging/linux/`。没有修改会话协议、远端密码校验、输入注入、屏幕捕获或媒体传输实现，也没有修改翻译和子模块。原版目录保持干净。
+
+## 当前范围
+
+- 交付目标为 Ubuntu 24.04+、x86_64 的便携 Flutter 桌面程序，使用软件视频编解码；没有启用硬件编解码。
+- 未提供公网服务器，因此没有代为部署公网中转；实际公网防火墙、安全组、双机桌面连接和 Wayland 权限流程仍需在目标环境验证。
+- Windows、macOS 及移动端保留上游源码，但本次没有编译或实机验收。
+- 自建中转仍需在两个客户端导入一次服务器配置。免账户不等于免远端授权，访问密码 / 对端确认沿用原版。

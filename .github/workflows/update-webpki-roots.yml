@@ -11,8 +11,6 @@ name: Update webpki-roots
 # branch, to run CI on it.
 
 on:
-  schedule:
-    - cron: "0 3 * * 1"
   workflow_dispatch:
 
 # A manual dispatch overlapping the weekly run would race it force-pushing

@@ -1,3 +1,48 @@
+# LanternDesk · 灯塔桌面
+
+基于 RustDesk 的独立远程桌面项目。打开即可通过 **设备 ID + 访问密码 / 对端确认** 连接，无需注册或登录账户。保留 RustDesk 的画面、键鼠、文件传输、直连和中转能力。
+
+- 原始基线：[`rustdesk/rustdesk@53996e3c`](https://github.com/rustdesk/rustdesk/commit/53996e3c404ea5083df0775057e4149e49102084)。保留原项目历史和许可证；`libs/hbb_common` 固定在原提交。
+- 名称和 Linux 配置独立：`LanternDesk`，配置位于 `~/.config/lanterndesk/`。账户入口默认关闭。
+- 首次启动沿用上游公共发现 / 中转默认值；自建中转配置一次即可，不需要账户服务器。被控端的密码或授权确认仍然保留。
+- 本次交付目标：**Ubuntu 24.04+、Linux x86_64、Flutter 桌面版**。使用软件视频编解码；其他平台仍保留上游源码，本项目尚未编译验收。
+
+## Linux 中转：克隆后一步配置
+
+在准备作为中转的 Debian / Ubuntu Linux 服务器上执行（私有仓库需先配置你的 GitHub 访问权限）：
+
+```bash
+git clone --recurse-submodules https://github.com/Cbetula/lanterndesk.git
+cd lanterndesk
+sudo bash scripts/setup-relay.sh --host 你的服务器公网IP或域名
+```
+
+脚本安装所需 Docker 组件、启动 `hbbs` / `hbbr`、持久保存密钥，并打印客户端配置。两端客户端均导入脚本输出的配置，API 服务器留空。公网安全组需允许 **TCP 21115–21117、UDP 21116**。端口和具体导入方法见 [中转部署说明](docs/RELAY_ZH.md)。
+
+## 编译和运行桌面客户端
+
+在安装并可使用 Docker Engine 的 Linux x86_64 机器上：
+
+```bash
+git submodule update --init --recursive
+./scripts/build-linux.sh
+./dist/lanterndesk-linux-x86_64/lanterndesk
+```
+
+首次构建会下载工具链和依赖。构建使用隔离的 Ubuntu 24.04 容器，不要求在宿主机安装 Flutter；产物为 `dist/lanterndesk-linux-x86_64.tar.gz`。解压后保留同目录下的 `lib/` 和 `data/`。运行依赖与构建来源见 [Linux 构建说明](packaging/linux/README.md)。
+
+此仓库保存了与基线一致、经过 SHA-256 校验的上游桥接文件归档，**不运行桥接代码生成器**。升级 RustDesk 基线或修改 FFI 时，需同步审查桥接文件。
+
+## 与上游的边界
+
+应用名和账户开关在独立模块 `src/lantern.rs` 初始化，原有会话协议和中转实现保持原样。Linux 可执行文件、GTK 应用 ID 和 DBus 名称使用独立身份，避免与原版同时运行时冲突。上游自动定时工作流在此独立仓库中关闭；仍保留原工作流供维护时参考。
+
+本项目继承上游 [AGPL-3.0 许可证](LICENCE)；保留原作者归属、版权与许可证信息。下面保留上游 README 供参考，其中下载、支持和品牌链接指向 **RustDesk 原项目**。
+
+本次测试结果、逐文件回归范围和已知限制见 [交付验收记录](docs/VALIDATION_ZH.md)。
+
+---
+
 <p align="center">
   <img src="res/logo-header.svg" alt="RustDesk - Your remote desktop"><br>
   <a href="#raw-steps-to-build">Build</a> •

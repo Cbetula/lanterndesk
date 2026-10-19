@@ -10,7 +10,7 @@ use hbb_common::log;
 use std::collections::HashMap;
 use std::{error::Error, fmt, time::Duration};
 
-const DBUS_NAME: &str = "org.rustdesk.rustdesk";
+const DBUS_NAME: &str = "io.github.cbetula.lanterndesk";
 const DBUS_PREFIX: &str = "/dbus";
 const DBUS_METHOD_NEW_CONNECTION: &str = "NewConnection";
 const DBUS_METHOD_NEW_CONNECTION_ID: &str = "id";
@@ -34,7 +34,7 @@ impl Error for DbusError {}
 /// [Tips]:
 /// How to test by CLI:
 /// - use dbus-send command:
-/// `dbus-send --session --print-reply --dest=org.rustdesk.rustdesk /dbus org.rustdesk.rustdesk.NewConnection string:'PEER_ID'`
+/// `dbus-send --session --print-reply --dest=io.github.cbetula.lanterndesk /dbus io.github.cbetula.lanterndesk.NewConnection string:'PEER_ID'`
 pub fn invoke_new_connection(uni_links: String) -> Result<(), Box<dyn Error>> {
     log::info!("Starting dbus service for uni");
     let conn = Connection::new_session()?;

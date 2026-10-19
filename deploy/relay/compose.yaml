@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  hbbr:
+    image: rustdesk/rustdesk-server:1.1.16
+    command: ["hbbr", "-k", "_"]
+    restart: unless-stopped
+    ports:
+      - "21117:21117/tcp"
+    volumes:
+      - ./data:/root
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  hbbs:
+    image: rustdesk/rustdesk-server:1.1.16
+    command: ["hbbs", "-r", "${RELAY_HOST:?Set RELAY_HOST}:21117", "-k", "_"]
+    restart: unless-stopped
+    depends_on:
+      - hbbr
+    ports:
+      - "21115:21115/tcp"
+      - "21116:21116/tcp"
+      - "21116:21116/udp"
+    volumes:
+      - ./data:/root
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
