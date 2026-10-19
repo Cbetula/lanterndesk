@@ -311,7 +311,7 @@ impl RendezvousMediator {
                 && !crate::platform::installing_service()
             {
                 let mut futs = Vec::new();
-                let servers = Config::get_rendezvous_servers();
+                let servers = crate::lantern::rendezvous_servers();
                 SHOULD_EXIT.store(false, Ordering::SeqCst);
                 MANUAL_RESTARTED.store(false, Ordering::SeqCst);
                 for host in servers.clone() {
@@ -697,6 +697,9 @@ impl RendezvousMediator {
         webrtc_sdp_answer: String,
         meta: ConnectionMeta,
     ) -> ResultType<()> {
+        if !crate::lantern::is_self_hosted_server(&relay_server) {
+            bail!(crate::lantern::SERVER_REQUIRED);
+        }
         let peer_addr = AddrMangle::decode(&socket_addr);
         log::info!(
             "create_relay requested from {:?}, relay_server: {}, uuid: {}, secure: {}",
@@ -1060,11 +1063,10 @@ impl RendezvousMediator {
         // (ws), so answer with full ICE and let a direct pair form.
         let webrtc_relay_only =
             ph.force_relay && !WebRTCStream::endpoint_declares_all_ice(&ph.webrtc_sdp_offer);
-        // No enable-webrtc check here: it is LocalConfig, which the UI process writes and never
-        // syncs over IPC, so this (server) process would read the private-server default of "N"
-        // and refuse to answer in exactly the self-hosted deployments the transport is for.
+        // LanternDesk enforces this option in both processes to avoid public STUN probes.
         // A proxy still rules it out — ICE would bypass it and leak the real IP.
         let webrtc_viable = !ph.webrtc_sdp_offer.is_empty()
+            && crate::get_webrtc_enabled()
             && !Config::is_proxy()
             && (!webrtc_relay_only || WebRTCStream::has_turn_server());
         let webrtc_sdp_answer = if webrtc_viable {

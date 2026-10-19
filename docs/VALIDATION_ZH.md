@@ -18,7 +18,15 @@
 - 使用独立 XDG 目录、Xvfb 和 DBus 会话启动，Flutter 日志到达 `_globalFFI init end` 和主窗口激活事件，程序持续运行 50 秒后由测试超时正常终止，未发生程序崩溃、缺失动态库或 Dart 异常。虚拟显示环境出现 portal、keyring 和 DRI 警告；实际桌面的屏幕共享权限仍需实机验证。
 - 隔离启动生成 LanternDesk 自己的配置与 IPC 路径，没有使用原版 RustDesk 设置。
 
-## macOS 构建验证
+## 仅自建服务器／IP 直连（0.1.2）
+
+- `cargo test --locked --release --lib --features flutter,linux-pkg-config,unix-file-copy-paste lantern::tests`：3 项通过，覆盖空配置无公共回退、拒绝公共服务器、自建地址的端口及优先级。
+- 使用隔离 Docker 网络、独立配置、Xvfb／DBus 和 `strace` 启动实际 Linux 包，分别检查空配置、带有旧公共地址及已启用公共 STUN 选项的配置、自建 hbbs/hbbr 配置。三个场景均监听 TCP 21118，直连均收到 45 字节的认证握手；跟踪期间没有公共服务的 DNS 查询或外部网络目标。
+- 自建 hbbs/hbbr 使用固定的 1.1.16 镜像，客户端成功注册公钥；服务器和客户端测试容器、网络均已清理。临时测试使用独立密钥，未改动用户的密码或服务器设置。
+- Linux 包 SHA-256：`d5ced67de05ecbe858ab4381c1f99993ac68de7cca71b62b0c529a09d7333c3e`。本机已退出旧程序并启动新程序，确认 TCP 21118 监听和 Flutter 初始化成功。
+- 当前保留 IP 直连、自建 ID 协商和自建中继。IPv6 打洞与 WebRTC 因隐含公共 STUN 依赖而禁用；直接输入 IPv6 地址仍走原 IP 直连路径。真实跨设备桌面控制与系统权限仍需实机验收。
+
+## macOS 0.1.1 构建验证（旧版）
 
 - 构建源码：`d57f0dff9da4be62701e93b050cb2a4ffe4836a8`；[GitHub Actions 记录](https://github.com/Cbetula/lanterndesk/actions/runs/39226767953)。Apple Silicon 与 Intel 均通过原生 Rust release、Flutter / Xcode 应用构建和 DMG 打包。
 - 两端均通过 bundle ID `io.github.cbetula.lanterndesk`、程序版本 `1.5.1`、主程序与服务的 CPU 架构检查；ad-hoc 签名通过 `codesign --verify --deep --strict`，音频输入 entitlement 检查通过。
@@ -32,6 +40,13 @@
 | --- | --- |
 | `src/lib.rs` | 声明新的 `lantern` 模块，使品牌默认值集中在独立文件。 |
 | `src/common.rs` | 在现有自定义客户端初始化入口加入一行调用，设置应用名并关闭现成的账户入口。该入口覆盖桌面、服务及 Flutter 初始化。 |
+| `src/lantern.rs` | 0.1.2 将显式自建服务器选择集中于此，空配置不返回服务器，默认开启可关闭的 IP 监听，并禁用公共 STUN 相关选项。 |
+| `src/common.rs`（0.1.2） | NAT、在线查询和 TCP API 代理改用显式服务器；空配置停止探测，移除公共 API 默认值，禁止后台 IPv6 公共 STUN 探测。保留原有消息及连接实现。 |
+| `src/client.rs` | IP 直连保留原路径；ID 连接在未配置服务器时给出明确提示，拒绝公共 ID／中继地址，避免显式 `@public` 绕过。 |
+| `src/ipc.rs` | 服务端和 UI 使用同一自建服务器选择，空列表保持为空，过滤旧进程返回的公共地址，避免 IPC 回退恢复公共默认值。 |
+| `src/rendezvous_mediator.rs` | 仅向显式自建地址注册；拒绝公共中继地址，并在被控端也禁止自动启动依赖公共 STUN 的 WebRTC。 |
+| `src/ui_interface.rs` | 移动端服务器列表和更改设备 ID 使用同一选择；无 ID 服务时返回配置提示，避免将空服务器列表误当作成功。 |
+| `src/lang/*.rs`（除 `en.rs`） | 追加一条配置提示键，提供简体中文，其余留空；既有译文不变。 |
 | `src/server/dbus.rs` | 使用独立的 Linux DBus 名称，防止与原版同时运行时连接请求发到另一款程序；同步修正文档示例命令。 |
 | `flutter/linux/CMakeLists.txt` | 修改 Linux 可执行文件名与 GTK 应用 ID，让系统识别 LanternDesk。内部桥接库名称不变。 |
 | `.gitignore` | 排除编译产物 `dist/`，避免二进制包进入源码提交。 |
@@ -44,7 +59,7 @@
 | `flutter/macos/Runner/Info.plist` | 注册独立的 lanterndesk URL scheme，避免与官方应用冲突。 |
 | `flutter/macos/Podfile` | 原生插件最低系统与 Mac 应用保持一致。 |
 
-新逻辑集中在 `src/lantern.rs`、`scripts/`、`deploy/relay/`、`packaging/` 和独立的 macOS 构建工作流。没有修改会话协议、远端密码校验、输入注入、屏幕捕获或媒体传输实现，也没有修改翻译和子模块。原版目录保持干净。Mac 这一轮只改变 Mac 应用身份、最低系统及打包路径，没有改动既有 Rust 或 Linux 运行路径。
+新逻辑集中在 `src/lantern.rs`、`scripts/`、`deploy/relay/`、`packaging/` 和独立的 macOS 构建工作流。0.1.2 的回归范围是服务器选择、空配置处理和传输开关；会话消息、密码校验、输入注入与屏幕捕获沿用原实现。共享文件只加入必要的选择调用和早期拒绝，不改动共享类型、函数签名或子模块。原版目录保持干净。
 
 ## 当前范围
 

@@ -47,7 +47,7 @@ use hbb_common::{
     bail,
     config::{
         self, use_ws, Config, LocalConfig, PeerConfig, PeerInfoSerde, Resolution,
-        CONNECT_TIMEOUT, READ_TIMEOUT, RELAY_PORT, RENDEZVOUS_PORT, RENDEZVOUS_SERVERS,
+        CONNECT_TIMEOUT, READ_TIMEOUT, RELAY_PORT, RENDEZVOUS_PORT,
     },
     futures::future::{select_ok, BoxFuture, FutureExt},
     get_version_number, log,
@@ -473,19 +473,14 @@ impl Client {
         let (rendezvous_server, servers, contained) = if other_server.is_empty() {
             crate::get_rendezvous_server(1_000).await
         } else {
-            if other_server == PUBLIC_SERVER {
-                (
-                    check_port(RENDEZVOUS_SERVERS[0], RENDEZVOUS_PORT),
-                    RENDEZVOUS_SERVERS[1..]
-                        .iter()
-                        .map(|x| x.to_string())
-                        .collect(),
-                    true,
-                )
-            } else {
-                (check_port(other_server, RENDEZVOUS_PORT), Vec::new(), true)
+            if !crate::lantern::is_self_hosted_server(other_server) {
+                bail!(crate::lantern::SERVER_REQUIRED);
             }
+            (check_port(other_server, RENDEZVOUS_PORT), Vec::new(), true)
         };
+        if rendezvous_server.is_empty() {
+            bail!(crate::lantern::SERVER_REQUIRED);
+        }
 
         // Same relay gate as the v6 socket below: under any forced relay the v6 punch cannot
         // be used, so probing v6 reachability is wasted work on every such connection.
@@ -1858,6 +1853,9 @@ impl Client {
         conn_type: ConnType,
         ipv4: bool,
     ) -> ResultType<Stream> {
+        if !crate::lantern::is_self_hosted_server(&relay_server) {
+            bail!(crate::lantern::SERVER_REQUIRED);
+        }
         // The proxy's address family does not constrain the relay target.
         let relay_server = check_port(relay_server, RELAY_PORT);
         let use_ws_proxy = Config::is_proxy() && is_ws_endpoint(&check_ws(&relay_server));
@@ -3775,7 +3773,7 @@ impl LoginConfigHandler {
     ) -> Message {
         let my_id = Config::get_id();
         let (my_id, pure_id) = if let Some((id, _, _)) = self.other_server.as_ref() {
-            let server = Config::get_rendezvous_server();
+            let server = crate::lantern::rendezvous_server();
             (format!("{my_id}@{server}"), id.clone())
         } else {
             (my_id, self.id.clone())

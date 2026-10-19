@@ -785,7 +785,7 @@ impl CheckIfRestart {
     pub fn new() -> CheckIfRestart {
         CheckIfRestart {
             stop_service: Config::get_option("stop-service"),
-            rendezvous_servers: Config::get_rendezvous_servers(),
+            rendezvous_servers: crate::lantern::rendezvous_servers(),
             audio_input: Config::get_option("audio-input"),
             voice_call_input: Config::get_option("voice-call-input"),
             ws: Config::get_option(OPTION_ALLOW_WEBSOCKET),
@@ -806,7 +806,7 @@ impl Drop for CheckIfRestart {
             != Config::get_option(keys::OPTION_ALLOW_INSECURE_TLS_FALLBACK);
         if allow_insecure_tls_fallback_changed
             || self.stop_service != Config::get_option("stop-service")
-            || self.rendezvous_servers != Config::get_rendezvous_servers()
+            || self.rendezvous_servers != crate::lantern::rendezvous_servers()
             || self.ws != Config::get_option(OPTION_ALLOW_WEBSOCKET)
             || self.disable_udp != Config::get_option(keys::OPTION_DISABLE_UDP)
             || self.api_server != Config::get_option("api-server")
@@ -964,11 +964,11 @@ async fn handle(data: Data, stream: &mut Connection) {
                 } else if name == "rendezvous_server" {
                     value = Some(format!(
                         "{},{}",
-                        Config::get_rendezvous_server(),
-                        Config::get_rendezvous_servers().join(",")
+                        crate::lantern::rendezvous_server(),
+                        crate::lantern::rendezvous_servers().join(",")
                     ));
                 } else if name == "rendezvous_servers" {
-                    value = Some(Config::get_rendezvous_servers().join(","));
+                    value = Some(crate::lantern::rendezvous_servers().join(","));
                 } else if name == "fingerprint" {
                     value = if Config::get_key_confirmed() {
                         Some(crate::common::pk_to_fingerprint(Config::get_key_pair().1))
@@ -1870,12 +1870,15 @@ pub async fn get_rendezvous_server(ms_timeout: u64) -> (String, Vec<String>) {
     if let Ok(Some(v)) = get_config_async("rendezvous_server", ms_timeout).await {
         let mut urls = v.split(",");
         let a = urls.next().unwrap_or_default().to_owned();
-        let b: Vec<String> = urls.map(|x| x.to_owned()).collect();
+        let b: Vec<String> = urls
+            .filter(|server| crate::lantern::is_self_hosted_server(server))
+            .map(|x| x.to_owned())
+            .collect();
         (a, b)
     } else {
         (
-            Config::get_rendezvous_server(),
-            Config::get_rendezvous_servers(),
+            crate::lantern::rendezvous_server(),
+            crate::lantern::rendezvous_servers(),
         )
     }
 }
@@ -1950,9 +1953,12 @@ pub async fn get_nat_type(ms_timeout: u64) -> i32 {
 
 pub async fn get_rendezvous_servers(ms_timeout: u64) -> Vec<String> {
     if let Ok(Some(v)) = get_config_async("rendezvous_servers", ms_timeout).await {
-        return v.split(',').map(|x| x.to_owned()).collect();
+        return v.split(',')
+            .filter(|server| crate::lantern::is_self_hosted_server(server))
+            .map(|x| x.to_owned())
+            .collect();
     }
-    return Config::get_rendezvous_servers();
+    return crate::lantern::rendezvous_servers();
 }
 
 #[inline]

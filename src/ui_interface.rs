@@ -1500,6 +1500,9 @@ pub async fn change_id_shared(id: String, old_id: String) -> String {
 }
 
 pub async fn change_id_shared_(id: String, old_id: String) -> &'static str {
+    if crate::lantern::rendezvous_server().is_empty() {
+        return crate::lantern::SERVER_REQUIRED;
+    }
     if !hbb_common::is_valid_custom_id(&id) {
         log::debug!(
             "debugging invalid id: \"{id}\", len: {}, base64: \"{}\"",
@@ -1529,7 +1532,7 @@ pub async fn change_id_shared_(id: String, old_id: String) -> &'static str {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     let rendezvous_servers = crate::ipc::get_rendezvous_servers(1_000).await;
     #[cfg(any(target_os = "android", target_os = "ios"))]
-    let rendezvous_servers = Config::get_rendezvous_servers();
+    let rendezvous_servers = crate::lantern::rendezvous_servers();
 
     let mut futs = Vec::new();
     let err: Arc<Mutex<&str>> = Default::default();

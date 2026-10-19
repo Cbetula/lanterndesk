@@ -813,5 +813,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("shortcut-key-not-supported", "“{}” 不能用作快捷键。"),
         ("On", "开"),
         ("Off", "关"),
+        ("Configure your own ID server in Settings > Network, or connect directly by IP.", "请在“设置 > 网络”中配置自己的 ID 服务器，或直接输入 IP 地址连接。"),
     ].iter().cloned().collect();
 }

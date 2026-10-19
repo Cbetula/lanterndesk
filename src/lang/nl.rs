@@ -813,5 +813,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("shortcut-key-not-supported", "Sneltoets wordt niet ondersteund"),
         ("On", "Aan"),
         ("Off", "Uit"),
+        ("Configure your own ID server in Settings > Network, or connect directly by IP.", ""),
     ].iter().cloned().collect();
 }

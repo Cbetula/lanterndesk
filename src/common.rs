@@ -660,6 +660,9 @@ impl Drop for CheckTestNatType {
 }
 
 pub fn test_nat_type() {
+    if crate::lantern::rendezvous_server().is_empty() {
+        return;
+    }
     test_ipv6_sync();
     use std::sync::atomic::{AtomicBool, Ordering};
     std::thread::spawn(move || {
@@ -703,9 +706,12 @@ pub fn test_nat_type() {
 
 #[tokio::main(flavor = "current_thread")]
 async fn test_nat_type_() -> ResultType<bool> {
+    let server1 = crate::lantern::rendezvous_server();
+    if server1.is_empty() {
+        return Ok(true);
+    }
     log::info!("Testing nat ...");
     let start = std::time::Instant::now();
-    let server1 = Config::get_rendezvous_server();
     let server2 = crate::increase_port(&server1, -1);
     let mut msg_out = RendezvousMessage::new();
     let serial = Config::get_serial();
@@ -766,6 +772,10 @@ pub async fn get_rendezvous_server(ms_timeout: u64) -> (String, Vec<String>, boo
             a = lic.host;
         }
     }
+    if !crate::lantern::is_self_hosted_server(&a) {
+        a.clear();
+    }
+    b.retain(|server| crate::lantern::is_self_hosted_server(server));
     let mut b: Vec<String> = b
         .drain(..)
         .map(|x| socket_client::check_port(x, config::RENDEZVOUS_PORT))
@@ -784,8 +794,8 @@ pub async fn get_rendezvous_server(ms_timeout: u64) -> (String, Vec<String>, boo
 #[cfg(any(target_os = "android", target_os = "ios"))]
 fn get_rendezvous_server_(_ms_timeout: u64) -> (String, Vec<String>) {
     (
-        Config::get_rendezvous_server(),
-        Config::get_rendezvous_servers(),
+        crate::lantern::rendezvous_server(),
+        crate::lantern::rendezvous_servers(),
     )
 }
 
@@ -810,7 +820,7 @@ pub async fn get_nat_type(ms_timeout: u64) -> i32 {
 // used for client to test which server is faster in case stop-servic=Y
 #[tokio::main(flavor = "current_thread")]
 async fn test_rendezvous_server_() {
-    let servers = Config::get_rendezvous_servers();
+    let servers = crate::lantern::rendezvous_servers();
     if servers.len() <= 1 {
         return;
     }
@@ -1225,6 +1235,9 @@ pub fn get_api_server(api: String, custom: String) -> String {
         return "".to_owned();
     }
     let mut res = get_api_server_(api, custom);
+    if is_public(&res) {
+        return String::new();
+    }
     if res.ends_with('/') {
         res.pop();
     }
@@ -1256,7 +1269,7 @@ fn get_api_server_(api: String, custom: String) -> String {
             return format!("http://{}", s);
         }
     }
-    "https://admin.rustdesk.com".to_owned()
+    String::new()
 }
 
 #[inline]
@@ -1307,7 +1320,7 @@ pub fn get_local_option(key: &str) -> String {
         || key == keys::OPTION_ENABLE_WEBRTC
     {
         if v.is_empty() {
-            if !is_public(&Config::get_rendezvous_server()) {
+            if !is_public(&crate::lantern::rendezvous_server()) {
                 return "N".to_owned();
             }
         }
@@ -1401,7 +1414,7 @@ fn tcp_proxy_log_target(url: &str) -> String {
 
 #[inline]
 fn get_tcp_proxy_addr() -> String {
-    check_port(Config::get_rendezvous_server(), RENDEZVOUS_PORT)
+    check_port(crate::lantern::rendezvous_server(), RENDEZVOUS_PORT)
 }
 
 /// Send an HTTP request via the rendezvous server's TCP proxy using protobuf.
@@ -2405,7 +2418,7 @@ pub fn create_symmetric_key_msg(their_pk_b: [u8; 32]) -> (Bytes, Bytes, secretbo
 
 #[inline]
 pub fn using_public_server() -> bool {
-    crate::get_custom_rendezvous_server(get_option("custom-rendezvous-server")).is_empty()
+    false
 }
 
 pub struct ThrottledInterval {
@@ -2749,6 +2762,9 @@ async fn test_bind_ipv6() -> ResultType<SocketAddr> {
 }
 
 pub async fn test_ipv6() -> Option<tokio::task::JoinHandle<()>> {
+    if !get_ipv6_punch_enabled() {
+        return None;
+    }
     {
         // One look and one claim of the minute, under one lock: two connections arriving
         // together would otherwise both find it over and both probe.

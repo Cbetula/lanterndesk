@@ -813,5 +813,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("shortcut-key-not-supported", "Não é possível usar \"{}\" como atalho."),
         ("On", "Ativado"),
         ("Off", "Desativado"),
+        ("Configure your own ID server in Settings > Network, or connect directly by IP.", ""),
     ].iter().cloned().collect();
 }
