@@ -2,6 +2,8 @@
 
 基于 RustDesk 的独立远程桌面项目。打开即可通过 **设备 ID + 访问密码 / 对端确认** 连接，无需注册或登录账户。保留 RustDesk 的画面、键鼠、文件传输、直连和中转能力。
 
+已编译的 Linux 程序和校验文件：[LanternDesk 0.1.0 下载与运行说明](https://github.com/Cbetula/lanterndesk/releases/tag/lanterndesk-v0.1.0)。编译包保存在独立的 `codex/linux-artifacts` 分支，`main` 保存源码。
+
 - 原始基线：[`rustdesk/rustdesk@53996e3c`](https://github.com/rustdesk/rustdesk/commit/53996e3c404ea5083df0775057e4149e49102084)。保留原项目历史和许可证；`libs/hbb_common` 固定在原提交。
 - 名称和 Linux 配置独立：`LanternDesk`，配置位于 `~/.config/lanterndesk/`。账户入口默认关闭。
 - 首次启动沿用上游公共发现 / 中转默认值；自建中转配置一次即可，不需要账户服务器。被控端的密码或授权确认仍然保留。
