@@ -4,10 +4,12 @@
 
 已编译的 Linux 程序和校验文件：[LanternDesk 0.1.0 下载与运行说明](https://github.com/Cbetula/lanterndesk/releases/tag/lanterndesk-v0.1.0)。编译包保存在独立的 `codex/linux-artifacts` 分支，`main` 保存源码。
 
+已编译的 Mac 安装包：[LanternDesk 0.1.1（Apple Silicon / Intel）](https://github.com/Cbetula/lanterndesk/releases/tag/lanterndesk-v0.1.1)。下载对应芯片的 DMG 和 SHA-256 文件，需要 macOS 13 或更新版本。
+
 - 原始基线：[`rustdesk/rustdesk@53996e3c`](https://github.com/rustdesk/rustdesk/commit/53996e3c404ea5083df0775057e4149e49102084)。保留原项目历史和许可证；`libs/hbb_common` 固定在原提交。
 - 名称和 Linux 配置独立：`LanternDesk`，配置位于 `~/.config/lanterndesk/`。账户入口默认关闭。
 - 首次启动沿用上游公共发现 / 中转默认值；自建中转配置一次即可，不需要账户服务器。被控端的密码或授权确认仍然保留。
-- 本次交付目标：**Ubuntu 24.04+、Linux x86_64、Flutter 桌面版**。使用软件视频编解码；其他平台仍保留上游源码，本项目尚未编译验收。
+- 已编译目标：**Ubuntu 24.04+ / Linux x86_64，以及 macOS 13+ / Apple Silicon、Intel 的 Flutter 桌面版**。使用软件视频编解码；其他平台仍保留上游源码，尚未编译验收。
 
 ## Linux 中转：克隆后一步配置
 

@@ -18,6 +18,14 @@
 - 使用独立 XDG 目录、Xvfb 和 DBus 会话启动，Flutter 日志到达 `_globalFFI init end` 和主窗口激活事件，程序持续运行 50 秒后由测试超时正常终止，未发生程序崩溃、缺失动态库或 Dart 异常。虚拟显示环境出现 portal、keyring 和 DRI 警告；实际桌面的屏幕共享权限仍需实机验证。
 - 隔离启动生成 LanternDesk 自己的配置与 IPC 路径，没有使用原版 RustDesk 设置。
 
+## macOS 构建验证
+
+- 构建源码：`d57f0dff9da4be62701e93b050cb2a4ffe4836a8`；[GitHub Actions 记录](https://github.com/Cbetula/lanterndesk/actions/runs/39226767953)。Apple Silicon 与 Intel 均通过原生 Rust release、Flutter / Xcode 应用构建和 DMG 打包。
+- 两端均通过 bundle ID `io.github.cbetula.lanterndesk`、程序版本 `1.5.1`、主程序与服务的 CPU 架构检查；ad-hoc 签名通过 `codesign --verify --deep --strict`，音频输入 entitlement 检查通过。
+- 两个 DMG 均通过 `hdiutil verify`，附有各自的 SHA-256 文件；[macOS 下载](https://github.com/Cbetula/lanterndesk/releases/tag/lanterndesk-v0.1.1)。
+- 构建使用固定 Flutter / Rust / NASM / vcpkg 版本、原桥接归档和已有 Dart 依赖锁；未运行桥接生成器，未修改源码锁文件或子模块。
+- 最低系统 macOS 13，使用软件视频编解码。未使用 Apple Developer ID 签名或公证；未完成真实 Mac 桌面启动、系统权限、双机远控及开机服务的实机验收。
+
 ## 现有文件与运行路径的改动
 
 | 现有文件 | 改动范围及必要原因 |
@@ -30,12 +38,17 @@
 | `README.md` | 在原文前添加本项目定位、构建和中转指令，并保留上游说明与归属。 |
 | `.github/workflows/flutter-nightly.yml` | 移除自动定时触发，避免新私有仓库自动运行上游全平台发布任务；保留手动入口。 |
 | `.github/workflows/update-webpki-roots.yml` | 移除自动定时触发，避免未经配置的副本定期创建更新分支；保留手动入口。 |
+| `flutter/macos/Runner/Configs/AppInfo.xcconfig` | 独立应用名和 bundle ID，输出 LanternDesk.app。 |
+| `flutter/macos/Runner.xcodeproj/project.pbxproj` | 同步产品与 bundle ID，移除上游开发者团队，最低系统设为 macOS 13 以匹配原生依赖及 ScreenCaptureKit。 |
+| `flutter/macos/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme` | 同步应用产物名称，供 Xcode 构建和启动定位。 |
+| `flutter/macos/Runner/Info.plist` | 注册独立的 lanterndesk URL scheme，避免与官方应用冲突。 |
+| `flutter/macos/Podfile` | 原生插件最低系统与 Mac 应用保持一致。 |
 
-新逻辑集中在 `src/lantern.rs`、`scripts/`、`deploy/relay/` 和 `packaging/linux/`。没有修改会话协议、远端密码校验、输入注入、屏幕捕获或媒体传输实现，也没有修改翻译和子模块。原版目录保持干净。
+新逻辑集中在 `src/lantern.rs`、`scripts/`、`deploy/relay/`、`packaging/` 和独立的 macOS 构建工作流。没有修改会话协议、远端密码校验、输入注入、屏幕捕获或媒体传输实现，也没有修改翻译和子模块。原版目录保持干净。Mac 这一轮只改变 Mac 应用身份、最低系统及打包路径，没有改动既有 Rust 或 Linux 运行路径。
 
 ## 当前范围
 
 - 交付目标为 Ubuntu 24.04+、x86_64 的便携 Flutter 桌面程序，使用软件视频编解码；没有启用硬件编解码。
 - 未提供公网服务器，因此没有代为部署公网中转；实际公网防火墙、安全组、双机桌面连接和 Wayland 权限流程仍需在目标环境验证。
-- Windows、macOS 及移动端保留上游源码，但本次没有编译或实机验收。
+- macOS 已完成上述双架构构建检查，实机验收仍待完成；Windows 及移动端保留上游源码，本次没有编译或实机验收。
 - 自建中转仍需在两个客户端导入一次服务器配置。免账户不等于免远端授权，访问密码 / 对端确认沿用原版。
