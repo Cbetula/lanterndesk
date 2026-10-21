@@ -115,7 +115,7 @@ sudo cat /opt/lanterndesk-relay/client-config.json
 | API 服务器 | 留空，对应 JSON 中的空 `api` |
 | Key | JSON 中的 `key`，即服务器生成的**公钥** |
 
-Key 不是账号密码，也不是远程访问密码。请使用部署脚本生成的实际公钥；服务器的 `data/id_ed25519` 是**私钥**，不要填入客户端或对外分享。
+Key 是部署脚本生成的实际公钥在`/opt/lanterndesk-relay/client-config.json`里能查看。
 
 #### 4. 通过设备 ID 连接
 
