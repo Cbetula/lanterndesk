@@ -1,237 +1,138 @@
 # LanternDesk · 灯塔桌面
 
-基于 RustDesk 的独立远程桌面项目。仅使用**自己的 ID／中继服务器或 IP 直连**，无需注册或登录账户。设备 ID 连接需要两端配置同一套自建服务器；IP 直连不需要服务器。访问密码／对端确认仍然保留。
+LanternDesk 是基于 [RustDesk](https://github.com/rustdesk/rustdesk) 的远程桌面项目，**无需注册或登录账号**，仅使用以下两种连接方式：
 
-仅自建服务器／IP 直连版：[Linux x86_64 下载](https://github.com/Cbetula/lanterndesk/raw/refs/heads/codex/private-network-artifacts/lanterndesk-v0.1.2-linux-x86_64.tar.gz) · [SHA-256](https://github.com/Cbetula/lanterndesk/raw/refs/heads/codex/private-network-artifacts/lanterndesk-v0.1.2-linux-x86_64.tar.gz.sha256)。Linux 编译包保存在独立的 `codex/private-network-artifacts` 分支，`main` 保存源码。
+- **IP 直连**：通过被控电脑可达的 IP 地址连接，无需部署服务器，适合局域网或已有 VPN 的环境。
+- **自部署 ID／中继服务器**：两端配置同一套自建服务器后，通过设备 ID 连接；直接连接失败时使用自建中继转发。
 
-当前修改只交付 Linux 编译包；Mac 由维护者在 Mac 本机构建、发布，见下方说明。旧版 0.1.0／0.1.1 保留了公共服务器默认值，请使用当前 Linux 包或从当前源码构建。
+本项目不使用或回退到 RustDesk 公共 ID／中继服务器。远程访问仍需密码验证或被控端确认。
 
-- 原始基线：[`rustdesk/rustdesk@53996e3c`](https://github.com/rustdesk/rustdesk/commit/53996e3c404ea5083df0775057e4149e49102084)。保留原项目历史和许可证；`libs/hbb_common` 固定在原提交。
-- 名称和 Linux 配置独立：`LanternDesk`，配置位于 `~/.config/lanterndesk/`。账户入口默认关闭。
-- 未配置服务器时不注册、不查询公共设备 ID，也不回退到 RustDesk 公共服务器；默认开启 IP 直连监听（TCP 21118），可以在安全设置中关闭。使用设备 ID 时必须先配置自己的服务器。
-- 首页在 ID 下方显示本机 IPv4 地址与直连端口，点击地址即可复制；多网卡地址可在 IP 栏滚动查看。未配置自建服务器时，底部提示使用 IP 直连。固定密码只要求非空、两次输入一致，不限制长度、大小写、数字或符号，首尾空格原样保留。
-- 禁用依赖公共 STUN 的 IPv6 打洞和 WebRTC 路径；支持 IP 直连、自建服务器协商的 TCP／UDP 连接以及自建中继。直接输入可达的 IPv6 地址不受影响。
-- 当前已编译目标：**Ubuntu 24.04+ / Linux x86_64 的 Flutter 桌面版**，使用软件视频编解码。macOS 13+ 保留本机构建脚本；旧版 Mac 构建记录不代表当前源码已在 Mac 验收。
+[下载 Release](https://github.com/Cbetula/lanterndesk/releases) · [一行命令部署服务器](#一行命令部署服务器) · [客户端使用教程](#客户端使用教程)
 
-## Linux 中转：克隆后一步配置
+## 下载与编译平台
 
-在准备作为中转的 Debian / Ubuntu Linux 服务器上执行（私有仓库需先配置你的 GitHub 访问权限）：
+目前仅在以下环境编译过，其他系统版本和架构暂未验证：
 
-```bash
-git clone --recurse-submodules https://github.com/Cbetula/lanterndesk.git
-cd lanterndesk
-sudo bash scripts/setup-relay.sh --host 你的服务器公网IP或域名
-```
+| 系统 | 架构 | 安装包 |
+| --- | --- | --- |
+| Linux · Ubuntu 24.04 | x86_64 | [Linux 压缩包](https://github.com/Cbetula/lanterndesk/releases/download/lanterndesk-v0.1.2/lanterndesk-v0.1.2-linux-x86_64.tar.gz) |
+| macOS 27 | ARM64 · Apple Silicon | [macOS DMG](https://github.com/Cbetula/lanterndesk/releases/download/lanterndesk-v0.1.2/lanterndesk-macos-arm64.dmg) |
 
-脚本安装所需 Docker 组件、启动 `hbbs` / `hbbr`、持久保存密钥，并打印客户端配置。两端客户端均导入脚本输出的配置，API 服务器留空。公网安全组需允许 **TCP 21115–21117、UDP 21116**。端口和具体导入方法见 [中转部署说明](docs/RELAY_ZH.md)。
+上表链接对应 **v0.1.2**。后续版本请查看 [最新 Release](https://github.com/Cbetula/lanterndesk/releases/latest)。
 
-## 编译和运行桌面客户端
+### Linux
 
-在安装并可使用 Docker Engine 的 Linux x86_64 机器上：
+下载压缩包后，在下载目录执行：
 
 ```bash
-git submodule update --init --recursive
-./scripts/build-linux.sh
-./dist/lanterndesk-linux-x86_64/lanterndesk
+tar -xzf lanterndesk-v0.1.2-linux-x86_64.tar.gz
+cd lanterndesk-linux-x86_64
+./lanterndesk
 ```
 
-首次构建会下载工具链和依赖。构建使用隔离的 Ubuntu 24.04 容器，不要求在宿主机安装 Flutter；产物为 `dist/lanterndesk-linux-x86_64.tar.gz`。解压后保留同目录下的 `lib/` 和 `data/`。运行依赖与构建来源见 [Linux 构建说明](packaging/linux/README.md)。
+请保留程序旁的 `lib/` 和 `data/` 目录。运行依赖见 [Linux 构建与运行说明](packaging/linux/README.md)。
 
-此仓库保存了与基线一致、经过 SHA-256 校验的上游桥接文件归档，**不运行桥接代码生成器**。升级 RustDesk 基线或修改 FFI 时，需同步审查桥接文件。
+### macOS
 
-## Mac 本机构建
+打开 DMG，将 `LanternDesk.app` 拖入“应用程序”后启动。当前安装包使用临时签名，尚未经过 Apple 公证；首次启动如被系统拦截，可在“系统设置 → 隐私与安全性”中允许打开。
 
-在装好完整 Xcode、rustup 和构建依赖的 Mac 上运行 `./scripts/build-macos.sh`，会按本机芯片生成 Apple Silicon 或 Intel 的 DMG。最低目标为 macOS 13，采用临时签名，尚未经过 Apple 公证。Linux 主机不能直接运行这套 Xcode 构建。[准备步骤、签名说明与回归范围](packaging/macos/README.md)。
+作为被控电脑使用时，按提示授予“屏幕与系统音频录制”（或“屏幕录制”）和“辅助功能”权限；键鼠输入仍异常时，按提示检查“输入监控”。权限名称可能随系统版本略有不同，授权后按提示重新启动应用。
 
-## 与上游的边界
+## 一行命令部署服务器
 
-应用名和账户开关在独立模块 `src/lantern.rs` 初始化，原有会话协议和中转实现保持原样。Linux 可执行文件、GTK 应用 ID 和 DBus 名称使用独立身份，避免与原版同时运行时冲突。上游自动定时工作流在此独立仓库中关闭；仍保留原工作流供维护时参考。
+在准备作为服务器的 **Debian／Ubuntu Linux** 上执行以下命令。需要已安装 Git、可用的 `sudo` 和 systemd；将 `relay.example.com` 替换为客户端能够访问的服务器 IP 或域名，**不要带协议头或端口**。
 
-本项目继承上游 [AGPL-3.0 许可证](LICENCE)；保留原作者归属、版权与许可证信息。下面保留上游 README 供参考，其中下载、支持和品牌链接指向 **RustDesk 原项目**。
-
-本次测试结果、逐文件回归范围和已知限制见 [交付验收记录](docs/VALIDATION_ZH.md)。
-
----
-
-<p align="center">
-  <img src="res/logo-header.svg" alt="RustDesk - Your remote desktop"><br>
-  <a href="#raw-steps-to-build">Build</a> •
-  <a href="#how-to-build-with-docker">Docker</a> •
-  <a href="#file-structure">Structure</a> •
-  <a href="#screenshots">Screenshots</a><br>
-  [<a href="docs/README-UA.md">Українська</a>] | [<a href="docs/README-CS.md">česky</a>] | [<a href="docs/README-ZH.md">中文</a>] | [<a href="docs/README-HU.md">Magyar</a>] | [<a href="docs/README-ES.md">Español</a>] | [<a href="docs/README-FA.md">فارسی</a>] | [<a href="docs/README-FR.md">Français</a>] | [<a href="docs/README-DE.md">Deutsch</a>] | [<a href="docs/README-PL.md">Polski</a>] | [<a href="docs/README-ID.md">Indonesian</a>] | [<a href="docs/README-FI.md">Suomi</a>] | [<a href="docs/README-ML.md">മലയാളം</a>] | [<a href="docs/README-JP.md">日本語</a>] | [<a href="docs/README-NL.md">Nederlands</a>] | [<a href="docs/README-IT.md">Italiano</a>] | [<a href="docs/README-RU.md">Русский</a>] | [<a href="docs/README-PTBR.md">Português (Brasil)</a>] | [<a href="docs/README-EO.md">Esperanto</a>] | [<a href="docs/README-KR.md">한국어</a>] | [<a href="docs/README-AR.md">العربي</a>] | [<a href="docs/README-VN.md">Tiếng Việt</a>] | [<a href="docs/README-DA.md">Dansk</a>] | [<a href="docs/README-GR.md">Ελληνικά</a>] | [<a href="docs/README-TR.md">Türkçe</a>] | [<a href="docs/README-NO.md">Norsk</a>] | [<a href="docs/README-RO.md">Română</a>]<br>
-  <b>We need your help to translate this README, <a href="https://github.com/rustdesk/rustdesk/tree/master/src/lang">RustDesk UI</a> and <a href="https://github.com/rustdesk/doc.rustdesk.com">RustDesk Doc</a> to your native language</b>
-</p>
-
-> [!Caution]
-> **Misuse Disclaimer:** <br>
-> The developers of RustDesk do not condone or support any unethical or illegal use of this software. Misuse, such as unauthorized access, control or invasion of privacy, is strictly against our guidelines. The authors are not responsible for any misuse of the application.
-
-
-Chat with us: [Discord](https://discord.gg/nDceKgxnkV) | [Twitter](https://twitter.com/rustdesk) | [Reddit](https://www.reddit.com/r/rustdesk) | [YouTube](https://www.youtube.com/@rustdesk)
-
-[![RustDesk Server Pro](https://img.shields.io/badge/RustDesk%20Server%20Pro-Advanced%20Features-blue)](https://rustdesk.com/pricing.html)
-
-Yet another remote desktop solution, written in Rust. Works out of the box with no configuration required. You have full control of your data, with no concerns about security. You can use our rendezvous/relay server, [set up your own](https://rustdesk.com/server), or [write your own rendezvous/relay server](https://github.com/rustdesk/rustdesk-server-demo).
-
-![image](https://user-images.githubusercontent.com/71636191/171661982-430285f0-2e12-4b1d-9957-4a58e375304d.png)
-
-RustDesk welcomes contribution from everyone. See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for help getting started.
-
-[**FAQ**](https://github.com/rustdesk/rustdesk/wiki/FAQ)
-
-[**BINARY DOWNLOAD**](https://github.com/rustdesk/rustdesk/releases)
-
-[**NIGHTLY BUILD**](https://github.com/rustdesk/rustdesk/releases/tag/nightly)
-
-[<img src="https://f-droid.org/badge/get-it-on.png"
-    alt="Get it on F-Droid"
-    height="80">](https://f-droid.org/en/packages/com.carriez.flutter_hbb)
-[<img src="https://flathub.org/api/badge?svg&locale=en"
-    alt="Get it on Flathub"
-    height="80">](https://flathub.org/apps/com.rustdesk.RustDesk)
-
-## Dependencies
-
-Desktop versions use Flutter or Sciter (deprecated) for GUI. This tutorial is for Sciter only, since it is easier and more friendly to start. Check out our [CI](https://github.com/rustdesk/rustdesk/blob/master/.github/workflows/flutter-build.yml) for building the Flutter version.
-
-Please download Sciter dynamic library yourself.
-
-[Windows](https://raw.githubusercontent.com/c-smile/sciter-sdk/master/bin.win/x64/sciter.dll) |
-[Linux](https://raw.githubusercontent.com/c-smile/sciter-sdk/master/bin.lnx/x64/libsciter-gtk.so) |
-[macOS](https://raw.githubusercontent.com/c-smile/sciter-sdk/master/bin.osx/libsciter.dylib)
-
-## Raw Steps to build
-
-- Prepare your Rust development env and C++ build env
-
-- Install [vcpkg](https://github.com/microsoft/vcpkg), and set `VCPKG_ROOT` env variable correctly
-
-  - Windows: vcpkg install libvpx:x64-windows-static libyuv:x64-windows-static opus:x64-windows-static aom:x64-windows-static
-  - Linux/macOS: vcpkg install libvpx libyuv opus aom
-
-- run `cargo run`
-
-## [Build](https://rustdesk.com/docs/en/dev/build/)
-
-## How to Build on Linux
-
-### Ubuntu 18 (Debian 10)
-
-```sh
-sudo apt install -y zip g++ gcc git curl wget nasm yasm libgtk-3-dev clang libxcb-randr0-dev libxdo-dev \
-        libxfixes-dev libxcb-shape0-dev libxcb-xfixes0-dev libasound2-dev libpulse-dev cmake make \
-        libclang-dev ninja-build libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
+```bash
+git clone --depth 1 https://github.com/Cbetula/lanterndesk.git lanterndesk-relay-setup && sudo bash lanterndesk-relay-setup/scripts/setup-relay.sh --host relay.example.com
 ```
 
-### openSUSE Tumbleweed
+此命令用于首次部署，会下载仓库及部署模板。已有仓库时，可在仓库目录直接运行 `sudo bash scripts/setup-relay.sh --host relay.example.com`。
 
-```sh
-sudo zypper install gcc-c++ git curl wget nasm yasm gcc gtk3-devel clang libxcb-devel libXfixes-devel cmake alsa-lib-devel gstreamer-devel gstreamer-plugins-base-devel xdotool-devel
+脚本会安装缺少的 Docker／Compose，启动 `hbbs`（ID 服务）和 `hbbr`（中继服务），并保存服务器密钥及客户端配置。默认安装目录为 `/opt/lanterndesk-relay`。服务器防火墙、云安全组及必要的路由端口转发需自行放行 **TCP 21115–21117、UDP 21116**；脚本不会自动修改这些规则。
+
+部署后，在服务器上查看可供客户端导入的配置：
+
+```bash
+sudo cat /opt/lanterndesk-relay/client-config.txt
 ```
 
-### Fedora 28 (CentOS 8)
+复制输出的**完整一行**，按照下方教程导入两端客户端。
 
-```sh
-sudo yum -y install gcc-c++ git curl wget nasm yasm gcc gtk3-devel clang libxcb-devel libxdo-devel libXfixes-devel pulseaudio-libs-devel cmake alsa-lib-devel gstreamer1-devel gstreamer1-plugins-base-devel
+[查看部署脚本](scripts/setup-relay.sh) · [完整部署、端口与备份说明](docs/RELAY_ZH.md)
+
+## 客户端使用教程
+
+控制端是发起连接的电脑，被控端是要远程操作的电脑。两端均需安装并运行 LanternDesk。以下截图中的设备 ID、IP、密码、用户名和服务器配置均已遮盖；文字示例使用示例地址，实际操作时请换成自己的配置。
+
+### 方式一：IP 直连
+
+1. 在被控端首页找到左侧 **IP** 栏，选择控制端能够访问的地址。多网卡时可以滚动查看，点击地址即可复制 `IP:端口`。
+2. 在控制端右侧“**控制远程桌面**”输入框中粘贴地址，例如 `192.168.1.20:21118`，点击“**连接**”。默认端口为 **TCP 21118**，未修改端口时也可以只填写 IP。
+3. 按提示输入被控端显示的一次性密码，或由被控端确认连接，具体取决于被控端的安全设置。
+
+![IP 直连首页示意，设备 ID、IP、密码和用户名已遮盖](docs/images/client-home-redacted.png)
+
+IP 直接访问默认开启。如曾关闭，请在被控端“**设置 → 安全 → 允许 IP 直接访问**”中开启，并检查直连端口。控制端必须能访问被控端的地址和端口；跨公网时，被控端需要可达地址及相应端口转发，也可以改用下方的自建服务器方式。
+
+### 方式二：使用自建 ID／中继服务器
+
+#### 1. 打开服务器设置
+
+点击首页右上角菜单进入“**设置**”，选择“**网络 → ID/中继服务器**”。如显示“解锁网络设置”，请先解锁。
+
+![在设置的网络页面打开 ID/中继服务器](docs/images/network-settings.png)
+
+#### 2. 从服务器获取并导入配置
+
+客户端配置来自**你部署的服务器**。上面的部署脚本会在服务器上生成 `/opt/lanterndesk-relay/client-config.txt`，再次查看时运行：
+
+```bash
+sudo cat /opt/lanterndesk-relay/client-config.txt
 ```
 
-### Arch (Manjaro)
+将输出的完整一行复制到**当前客户端电脑的剪贴板**，然后在“ID/中继服务器”对话框中：
 
-```sh
-sudo pacman -Syu --needed unzip git cmake gcc curl wget yasm nasm zip make pkg-config clang gtk3 xdotool libxcb libxfixes alsa-lib pipewire
+1. 点击右上角左侧的**剪贴板图标**（下图“粘贴配置”），导入服务器配置。
+2. 检查 ID 服务器、中继服务器与 Key 已填入，**API 服务器留空**，点击“**确认**”保存。
+3. 在另一端客户端重复导入，确保**控制端和被控端使用同一套服务器配置**。
+
+右侧的**双纸图标**（下图“复制当前配置”）可将当前填写的配置复制到剪贴板，方便在另一台电脑导入；复制后仍需点击“确认”保存本机设置。
+
+![ID/中继服务器配置对话框：左侧图标粘贴配置，右侧图标复制当前配置；服务器地址和 Key 已打码](docs/images/relay-config-redacted.png)
+
+#### 3. 需要手动填写时
+
+同目录的 `/opt/lanterndesk-relay/client-config.json` 是可读版本，可以在服务器上查看：
+
+```bash
+sudo cat /opt/lanterndesk-relay/client-config.json
 ```
 
-### Install vcpkg
+| 客户端字段 | 配置来源与填写内容 |
+| --- | --- |
+| ID 服务器 | JSON 中的 `host`，通常为 `relay.example.com:21116` |
+| 中继服务器 | JSON 中的 `relay`，通常为 `relay.example.com:21117` |
+| API 服务器 | 留空，对应 JSON 中的空 `api` |
+| Key | JSON 中的 `key`，即服务器生成的**公钥** |
 
-```sh
-git clone https://github.com/microsoft/vcpkg
-cd vcpkg
-git checkout 2023.04.15
-cd ..
-vcpkg/bootstrap-vcpkg.sh
-export VCPKG_ROOT=$HOME/vcpkg
-vcpkg/vcpkg install libvpx libyuv opus aom
-```
+Key 不是账号密码，也不是远程访问密码。请使用部署脚本生成的实际公钥；服务器的 `data/id_ed25519` 是**私钥**，不要填入客户端或对外分享。
 
-### Fix libvpx (For Fedora)
+#### 4. 通过设备 ID 连接
 
-```sh
-cd vcpkg/buildtrees/libvpx/src
-cd *
-./configure
-sed -i 's/CFLAGS+=-I/CFLAGS+=-fPIC -I/g' Makefile
-sed -i 's/CXXFLAGS+=-I/CXXFLAGS+=-fPIC -I/g' Makefile
-make
-cp libvpx.a $HOME/vcpkg/installed/x64-linux/lib/
-cd
-```
+两端保存配置并就绪后，在控制端“控制远程桌面”输入框中输入**被控端的设备 ID**，点击“连接”，再按提示输入密码或由被控端确认。无法建立直接连接时，客户端会通过自建中继服务器转发。
 
-### Build
+### 密码与常见问题
 
-```sh
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
-git clone --recurse-submodules https://github.com/rustdesk/rustdesk
-cd rustdesk
-mkdir -p target/debug
-wget https://raw.githubusercontent.com/c-smile/sciter-sdk/master/bin.lnx/x64/libsciter-gtk.so
-mv libsciter-gtk.so target/debug
-VCPKG_ROOT=$HOME/vcpkg cargo run
-```
+- **需要固定密码**：在被控端“设置 → 安全 → 密码 → 使用固定密码”中点击“设置固定密码”；两次输入需一致，妥善保存。
+- **提示未配置自建服务器**：可继续使用 IP 直连；若要通过设备 ID 连接，请在两端导入服务器配置。
+- **IP 连接失败**：确认使用的是被控端可达的 IP、直连已开启，以及被控端防火墙允许实际使用的 TCP 端口（默认 21118）。
+- **ID 连接失败**：确认两端 ID 服务器、中继服务器、Key 一致，服务器服务已启动，服务器端口已放行。仅填写中继服务器不能完成设备 ID 注册。
+- **Mac 能连上但看不到画面或无法操作**：检查被控端的屏幕录制、辅助功能权限，并按提示重新启动应用。
 
-## How to build with Docker
+## 开发与上游
 
-Begin by cloning the repository and building the Docker container:
+本项目基于 [`rustdesk/rustdesk@53996e3c`](https://github.com/rustdesk/rustdesk/commit/53996e3c404ea5083df0775057e4149e49102084)，保留上游历史、作者归属与版权信息。
 
-```sh
-git clone https://github.com/rustdesk/rustdesk
-cd rustdesk
-git submodule update --init --recursive
-docker build -t "rustdesk-builder" .
-```
+[Linux 构建说明](packaging/linux/README.md) · [macOS 构建说明](packaging/macos/README.md) · [已有构建与验证记录](docs/VALIDATION_ZH.md)
 
-Then, each time you need to build the application, run the following command:
-
-```sh
-docker run --rm -it -v $PWD:/home/user/rustdesk -v rustdesk-git-cache:/home/user/.cargo/git -v rustdesk-registry-cache:/home/user/.cargo/registry -e PUID="$(id -u)" -e PGID="$(id -g)" rustdesk-builder
-```
-
-Note that the first build may take longer before dependencies are cached, subsequent builds will be faster. Additionally, if you need to specify different arguments to the build command, you may do so at the end of the command in the `<OPTIONAL-ARGS>` position. For instance, if you wanted to build an optimized release version, you would run the command above followed by `--release`. The resulting executable will be available in the target folder on your system, and can be run with:
-
-```sh
-target/debug/rustdesk
-```
-
-Or, if you're running a release executable:
-
-```sh
-target/release/rustdesk
-```
-
-Please ensure that you run these commands from the root of the RustDesk repository, or the application may not find the required resources. Also note that other cargo subcommands such as `install` or `run` are not currently supported via this method as they would install or run the program inside the container instead of the host.
-
-## File Structure
-
-- **[libs/hbb_common](https://github.com/rustdesk/rustdesk/tree/master/libs/hbb_common)**: video codec, config, tcp/udp wrapper, and some other utility functions shared with the server
-- **[libs/base](https://github.com/rustdesk/rustdesk/tree/master/libs/base)**: protobuf, fs functions for file transfer, keyboard and platform code used only by this app
-- **[libs/scrap](https://github.com/rustdesk/rustdesk/tree/master/libs/scrap)**: screen capture
-- **[libs/enigo](https://github.com/rustdesk/rustdesk/tree/master/libs/enigo)**: platform specific keyboard/mouse control
-- **[libs/clipboard](https://github.com/rustdesk/rustdesk/tree/master/libs/clipboard)**: file copy and paste implementation for Windows, Linux, macOS.
-- **[src/ui](https://github.com/rustdesk/rustdesk/tree/master/src/ui)**: obsolete Sciter UI (deprecated)
-- **[src/server](https://github.com/rustdesk/rustdesk/tree/master/src/server)**: audio/clipboard/input/video services, and network connections
-- **[src/client.rs](https://github.com/rustdesk/rustdesk/tree/master/src/client.rs)**: start a peer connection
-- **[src/rendezvous_mediator.rs](https://github.com/rustdesk/rustdesk/tree/master/src/rendezvous_mediator.rs)**: Communicate with [rustdesk-server](https://github.com/rustdesk/rustdesk-server), wait for remote direct (TCP hole punching) or relayed connection
-- **[src/platform](https://github.com/rustdesk/rustdesk/tree/master/src/platform)**: platform specific code
-- **[flutter](https://github.com/rustdesk/rustdesk/tree/master/flutter)**: Flutter code for desktop and mobile
-
-## Screenshots
-
-![Connection Manager](https://github.com/rustdesk/rustdesk/assets/28412477/db82d4e7-c4bc-4823-8e6f-6af7eadf7651)
-
-![Connected to a Windows PC](https://github.com/rustdesk/rustdesk/assets/28412477/9baa91e9-3362-4d06-aa1a-7518edcbd7ea)
-
-![File Transfer](https://github.com/rustdesk/rustdesk/assets/28412477/39511ad3-aa9a-4f8c-8947-1cce286a46ad)
-
-![TCP Tunneling](https://github.com/rustdesk/rustdesk/assets/28412477/78e8708f-e87e-4570-8373-1360033ea6c5)
-
+本项目沿用上游的 [AGPL-3.0 许可证](LICENCE)。
