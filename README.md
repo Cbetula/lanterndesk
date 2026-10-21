@@ -115,8 +115,6 @@ sudo cat /opt/lanterndesk-relay/client-config.json
 | API 服务器 | 留空，对应 JSON 中的空 `api` |
 | Key | JSON 中的 `key`，即服务器生成的**公钥** |
 
-Key 是部署脚本生成的实际公钥在`/opt/lanterndesk-relay/client-config.json`里能查看。
-
 #### 4. 通过设备 ID 连接
 
 两端保存配置并就绪后，在控制端“控制远程桌面”输入框中输入**被控端的设备 ID**，点击“连接”，再按提示输入密码或由被控端确认。无法建立直接连接时，客户端会通过自建中继服务器转发。
