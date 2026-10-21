@@ -2,7 +2,7 @@ LanternDesk（灯塔桌面）仅使用自己的 ID／中继服务器或 IP 直�
 
 未配置服务器时可输入被控端的可达 IP 直连（默认 TCP 21118）。设备 ID 连接必须配置自己的 hbbs/hbbr；空配置、旧公共地址缓存和 `<id>@public` 均不会回退到公共服务器。仍然需要访问密码或被控端确认。
 
-[Linux x86_64 编译包](https://github.com/Cbetula/lanterndesk/raw/refs/heads/codex/private-network-artifacts/lanterndesk-v0.1.2-linux-x86_64.tar.gz) · [Linux SHA-256](https://github.com/Cbetula/lanterndesk/raw/refs/heads/codex/private-network-artifacts/lanterndesk-v0.1.2-linux-x86_64.tar.gz.sha256)。Linux 包面向 Ubuntu 24.04+，解压后运行目录内的 `./lanterndesk`。
+[Linux x86_64 编译包](https://github.com/Cbetula/lanterndesk/raw/refs/tags/codex/private-network-artifacts/lanterndesk-v0.1.2-linux-x86_64.tar.gz) · [Linux SHA-256](https://github.com/Cbetula/lanterndesk/raw/refs/tags/codex/private-network-artifacts/lanterndesk-v0.1.2-linux-x86_64.tar.gz.sha256)。Linux 包面向 Ubuntu 24.04+，解压后运行目录内的 `./lanterndesk`。
 
 macOS 安装包：
 
